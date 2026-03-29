@@ -20,12 +20,18 @@ def verify_api_key(api_key: str = Security(api_key_header)):
 class CampaignRequest(BaseModel):
     customer_id: int
 
+class OfferAnalysisRequest(BaseModel):
+    offer_title: str
+    category: str
+
+
 # In production, these would be Environment Variables. 
 SERVICES = {
     "modeler": os.getenv("URL_MODELER", "https://data-modeling-service-xxx.a.run.app/api/v1/predict"),
     "profiler": os.getenv("URL_PROFILER", "https://profiler-service-xxx.a.run.app/api/v1/profile"),
     "strategist": os.getenv("URL_STRATEGIST", "https://strategist-service-xxx.a.run.app/api/v1/strategize"),
-    "reviewer": os.getenv("URL_REVIEWER", "https://reviewer-service-xxx.a.run.app/api/v1/review")
+    "reviewer": os.getenv("URL_REVIEWER", "https://reviewer-service-xxx.a.run.app/api/v1/review"),
+    "analytics": os.getenv("URL_ANALYTICS", "https://data-modeling-service-xxx.a.run.app/api/v1/cohort-analytics"),
 }
 
 @app.post("/api/v1/generate-campaign")
@@ -84,3 +90,68 @@ async def run_campaign_pipeline(request: CampaignRequest, api_key: str = Depends
 
     # Return the stream with the correct NDJSON media type
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+@app.post("/api/v1/analyze-offer")
+async def analyze_offer_viability(request: OfferAnalysisRequest, api_key: str = Depends(verify_api_key)):
+    """Routes category to BigQuery, then routes the results to the Strategist LLM."""
+    headers = {"Content-Type": "application/json", "X-API-Key": EXPECTED_API_KEY}
+    
+    async def event_stream():
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            try:
+                # --- STEP 1: Modeler (BigQuery Extraction) ---
+                yield json.dumps({"status": "update", "message": f"🔍 Gateway: Querying BigQuery for '{request.category}' cohorts..."}) + "\n"
+                
+                
+                res_bq = await client.post(SERVICES["analytics"], json={"category": request.category}, headers=headers)
+                res_bq.raise_for_status()
+                cohort_data = res_bq.json().get("top_cohorts", [])
+                
+                # --- STEP 2: Strategist (LLM Insights) ---
+                yield json.dumps({"status": "update", "message": "🧠 Gateway: Strategist Agent analyzing cohort viability..."}) + "\n"
+                
+                llm_payload = {
+                    "offer_title": request.offer_title,
+                    "offer_category": request.category,
+                    "cohort_data": cohort_data
+                }
+                res_strat = await client.post(SERVICES["strategist"].replace("/strategize", "/offer-insights"), json=llm_payload, headers=headers)
+                res_strat.raise_for_status()
+                strategic_insight = res_strat.json().get("strategic_insight")
+                
+                # --- FINAL PAYLOAD ---
+                final_payload = {
+                    "status": "complete",
+                    "data": {
+                        "top_cohorts": cohort_data,
+                        "strategic_insight": strategic_insight
+                    }
+                }
+                yield json.dumps(final_payload) + "\n"
+                
+            except httpx.HTTPStatusError as e:
+                yield json.dumps({"status": "error", "message": f"Service Error: {e.response.text}"}) + "\n"
+            except Exception as e:
+                yield json.dumps({"status": "error", "message": f"Internal Gateway Error: {str(e)}"}) + "\n"
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+@app.get("/api/v1/live-offers")
+async def fetch_live_offers(api_key: str = Depends(verify_api_key)):
+    """Routes the UI request to the Strategist service to get live deals."""
+    headers = {"Content-Type": "application/json", "X-API-Key": EXPECTED_API_KEY}
+    
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            # Dynamically target the new /live-deals endpoint on the Strategist
+            strat_url = SERVICES["strategist"].replace("/strategize", "/live-deals")
+            
+            response = await client.get(strat_url, headers=headers)
+            response.raise_for_status()
+            
+            return {
+                "status": "success",
+                "offers": response.json().get("offers", [])
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch live offers: {str(e)}")

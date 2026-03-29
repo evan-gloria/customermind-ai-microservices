@@ -17,6 +17,11 @@ def verify_api_key(api_key: str = Security(api_key_header)):
 class StrategistRequest(BaseModel):
     persona_brief: str
 
+class CohortInsightRequest(BaseModel):
+    offer_title: str
+    offer_category: str
+    cohort_data: list
+
 # 1. Define the Tool
 def fetch_ozbargain_deals() -> str:
     feed = feedparser.parse("https://www.ozbargain.com.au/feed")
@@ -54,5 +59,70 @@ async def generate_strategy(request: StrategistRequest, api_key: str = Depends(v
                     )
                     
         return {"status": "success", "strategy": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/offer-insights")
+async def generate_offer_insights(request: CohortInsightRequest, api_key: str = Depends(verify_api_key)):
+    """Generates strategic marketing insights based on BigQuery cohort data."""
+    try:
+        # Format the BigQuery data into a readable string for the LLM
+        data_summary = ""
+        for cohort in request.cohort_data:
+            data_summary += f"- {cohort['segment_name']}: {cohort['cohort_size']} users, Avg Age {cohort['avg_age']}, Avg Income ${cohort['avg_income']}\n"
+
+        prompt = f"""
+        You are a Chief Marketing Officer. Analyze this live campaign viability data.
+        
+        OFFER DETAILS:
+        - Title: {request.offer_title}
+        - Category: {request.offer_category}
+        
+        ELIGIBLE AUDIENCE (From BigQuery):
+        {data_summary}
+        
+        TASK:
+        Provide a brief, punchy strategic insight (max 3 paragraphs). 
+        1. Why is the top cohort a good match for this specific offer?
+        2. What specific marketing channel (e.g., TikTok, Email, LinkedIn) should we use to target them based on their age and income?
+        3. What is the potential risk or blind spot of this campaign?
+        """
+        
+        model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
+        model = GenerativeModel(model_name)
+        response = model.generate_content(prompt)
+        
+        return {"strategic_insight": response.text}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Strategist Error: {str(e)}")
+    
+
+def map_ozbargain_category(title: str) -> str:
+    """Heuristic router to map live deal titles to BigQuery categories."""
+    title_lower = title.lower()
+    if any(word in title_lower for word in ['laptop', 'pc', 'monitor', 'tv', 'phone', 'apple', 'samsung', 'ssd', 'tech']): return 'Tech'
+    if any(word in title_lower for word in ['mobile', 'sim', 'nbn', 'telstra', 'optus', 'vodafone']): return 'Telco'
+    if any(word in title_lower for word in ['flight', 'hotel', 'qantas', 'virgin', 'travel']): return 'Travel'
+    if any(word in title_lower for word in ['woolworths', 'coles', 'aldi', 'groceries']): return 'Groceries'
+    if any(word in title_lower for word in ['kfc', 'mcdonalds', 'beer', 'wine', 'food', 'pizza']): return 'Food'
+    if any(word in title_lower for word in ['bunnings', 'tool', 'drill', 'hardware']): return 'Hardware'
+    if any(word in title_lower for word in ['bank', 'card', 'cashback', 'loan', 'finance']): return 'Finance'
+    return 'Retail'
+
+@app.get("/api/v1/live-deals")
+async def get_live_deals():
+    """Fetches and categorizes the latest OzBargain deals for the UI."""
+    try:
+        feed = feedparser.parse("https://www.ozbargain.com.au/feed")
+        deals = []
+        for entry in feed.entries[:15]: # Grab the top 15
+            deals.append({
+                "title": entry.title,
+                "category": map_ozbargain_category(entry.title),
+                "link": entry.link
+            })
+        return {"offers": deals}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
