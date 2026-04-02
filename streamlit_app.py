@@ -180,11 +180,15 @@ else:
         st.info("**The Goal:** Transform raw customer data into a ready-to-send, highly personalized marketing campaign.\n\n**How it works:** Enter a Customer ID to trigger an autonomous AI workflow. The platform extracts their data, builds a psychological profile, scouts live market deals, and drafts a targeted email with auditing capability for brand safety.")
         col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
-            customer_id = st.number_input("Enter Customer ID", min_value=1, value=4141, step=1)
+            customer_id = st.text_input("Enter Customer ID", value="5917880785599854719", max_chars=20)
         with col2:
             st.write("") 
             st.write("") 
             execute_btn = st.button("Customer Analysis 💡", type="primary", use_container_width=True)
+
+        if customer_id and not customer_id.isdigit():
+            st.error("Invalid Input: Customer ID must contain only numbers.")
+            st.stop() # This prevents the rest of the page from loading or querying the database
 
         if execute_btn:
             headers = {"Content-Type": "application/json", "X-API-Key": api_key}
