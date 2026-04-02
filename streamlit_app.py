@@ -99,12 +99,12 @@ with st.sidebar:
     # ---------------------------------------------------------
     # Safely check if the ADMIN_KEY exists in the local environment or secrets.
     try:
-        admin_key = st.secrets.get("ADMIN_KEY")
+        refresh_admin_key = st.secrets.get("REFRESH_ADMIN_KEY")
     except FileNotFoundError:
-        admin_key = os.getenv("ADMIN_KEY")
+        refresh_admin_key = os.getenv("REFRESH_ADMIN_KEY")
         
     # ONLY render the UI if the ADMIN_KEY variable was found
-    if admin_key:
+    if refresh_admin_key:
         st.markdown("---")
         st.markdown(
             """<span style="font-size: 0.85em; color: gray;">
@@ -117,7 +117,7 @@ with st.sidebar:
         if st.button("🔄 Retrain AI Segments", type="primary", use_container_width=True):
             with st.spinner("Initiating Multi-Agent Workflow..."):
                 try:
-                    headers = {"X-API-Key": api_key} # Uses the global API key
+                    headers = {"X-API-Key": refresh_admin_key} # Uses the global API key
                     response = requests.post(f"{orchestrator_url}/tools/refresh-segments", headers=headers)
                     
                     if response.status_code == 200:
@@ -139,7 +139,7 @@ with st.sidebar:
             </p>
             <p style="font-size: 1em; font-weight: 600; margin-bottom: 10px;">
                 Evan Gloria </p>
-            <a href="https://github.com/evan-gloria" target="_blank" style="text-decoration: none;">
+            <a href="https://github.com/evan-gloria/agentic-customermind-gcp" target="_blank" style="text-decoration: none;">
                 <button style="background-color: #2e3138; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.85em; width: 100%;">
                     🐙 View Architecture on GitHub
                 </button>

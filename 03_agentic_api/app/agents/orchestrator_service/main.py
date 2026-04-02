@@ -13,11 +13,27 @@ app = FastAPI(title="Campaign Orchestrator API Gateway")
 
 # Security
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+# ---------------------------------------------------------
+# 1. LOAD THE KEYS FROM THE ENVIRONMENT (Injected by GCP)
+# ---------------------------------------------------------
 EXPECTED_API_KEY = os.getenv("API_KEY")
+EXPECTED_ADMIN_KEY = os.getenv("REFRESH_ADMIN_KEY") # This will hold your ai-segment-refresher-api-key
 
+# ---------------------------------------------------------
+# 2. STANDARD VERIFY FUNCTION (For Chat / Agents)
+# ---------------------------------------------------------
 def verify_api_key(api_key: str = Security(api_key_header)):
     if EXPECTED_API_KEY and api_key != EXPECTED_API_KEY:
         raise HTTPException(status_code=403, detail="Forbidden")
+    return api_key
+
+# ---------------------------------------------------------
+# 3. NEW ADMIN VERIFY FUNCTION (For MLOps only)
+# ---------------------------------------------------------
+def verify_admin_key(api_key: str = Security(api_key_header)):
+    # Block the request if the key doesn't match the Admin Secret
+    if not EXPECTED_ADMIN_KEY or api_key != EXPECTED_ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden: Invalid Admin Key")
     return api_key
 
 class ChatPrompt(BaseModel):
@@ -216,7 +232,7 @@ def execute_refresh_workflow():
         print(f"Background Workflow Failed: {str(e)}")
 
 @app.post("/tools/refresh-segments")
-async def trigger_refresh_tool(background_tasks: BackgroundTasks, api_key: str = Depends(verify_api_key)):
+async def trigger_refresh_tool(background_tasks: BackgroundTasks, api_key: str = Depends(verify_admin_key)):
     """
     The tool endpoint that your main LLM agent calls when 
     the user asks to refresh the data.
