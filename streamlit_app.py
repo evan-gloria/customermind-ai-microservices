@@ -93,31 +93,40 @@ with st.sidebar:
     <b>4. ⚖️ Compliance AI:</b> Strictly audits all outputs for brand safety and tone.
     </div>
     """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    # Add a tooltip explaining what this heavy action does
-    st.markdown(
-        """<span style="font-size: 0.85em; color: gray;">
-        Trigger the MLOps pipeline to retrain the K-Means model on fresh BigQuery data and instruct the Profiler AI to generate new segment personas.
-        </span>""", 
-        unsafe_allow_html=True
-    )
     
-    if st.button("🔄 Retrain AI Segments", type="primary", use_container_width=True):
-        with st.spinner("Initiating Multi-Agent Workflow..."):
-            try:
-                headers = {"X-API-Key": api_key}
-                # Call the Orchestrator's new tool endpoint
-                response = requests.post(f"{orchestrator_url}/tools/refresh-segments", headers=headers)
-                
-                if response.status_code == 200:
-                    # Use Streamlit's toast feature for a clean, non-intrusive notification
-                    st.toast("✅ Pipeline triggered successfully! Background retraining will take ~2 minutes.", icon="🚀")
-                else:
-                    st.error(f"Failed to trigger pipeline: {response.text}")
+    # ---------------------------------------------------------
+    # 🔒 SECURE MLOPS ADMIN PANEL (Environment Feature Flag)
+    # ---------------------------------------------------------
+    # Safely check if the ADMIN_KEY exists in the local environment or secrets.
+    try:
+        admin_key = st.secrets.get("ADMIN_KEY")
+    except FileNotFoundError:
+        admin_key = os.getenv("ADMIN_KEY")
+        
+    # ONLY render the UI if the ADMIN_KEY variable was found
+    if admin_key:
+        st.markdown("---")
+        st.markdown(
+            """<span style="font-size: 0.85em; color: gray;">
+            <b>🛠️ LOCAL ADMIN MODE</b><br>
+            Trigger the MLOps pipeline to retrain the K-Means model on fresh BigQuery data.
+            </span>""", 
+            unsafe_allow_html=True
+        )
+        
+        if st.button("🔄 Retrain AI Segments", type="primary", use_container_width=True):
+            with st.spinner("Initiating Multi-Agent Workflow..."):
+                try:
+                    headers = {"X-API-Key": api_key} # Uses the global API key
+                    response = requests.post(f"{orchestrator_url}/tools/refresh-segments", headers=headers)
                     
-            except Exception as e:
-                st.error(f"Connection Error: {str(e)}")
+                    if response.status_code == 200:
+                        st.toast("✅ Pipeline triggered successfully!", icon="🚀")
+                    else:
+                        st.error(f"Failed to trigger pipeline: {response.text}")
+                        
+                except Exception as e:
+                    st.error(f"Connection Error: {str(e)}")
     
     st.markdown("---")
     

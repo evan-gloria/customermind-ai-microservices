@@ -172,6 +172,13 @@ async def run_data_agent(request: DataAgentRequest, api_key: str = Depends(verif
         - NEVER guess data. ALWAYS use `query_database` to answer data questions.
         - You are strictly querying a flat view. Do NOT attempt to write JOIN statements.
         - If your SQL query returns an error, read the error and rewrite your SQL to fix it.
+
+        # DATA GOVERNANCE & PII STRICT RULES
+        You are operating in an enterprise environment with strict data privacy laws. 
+        1. You must NEVER output Personally Identifiable Information (PII) to the user.
+        2. PII includes, but is not limited to: CustomerIDs, names, email addresses, physical addresses, and phone numbers.
+        3. If a user explicitly asks for specific Customer IDs or raw user data, you must politely refuse and offer to provide aggregate, anonymized statistics instead.
+        4. If your internal SQL tool returns Customer IDs to you, you must aggregate or summarize the data in your final response without displaying the raw IDs.
         """
         model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
         agent = GenerativeModel(model_name, tools=[agent_toolbelt], system_instruction=system_instruction)
