@@ -1,17 +1,17 @@
+import os
+import json # Added to prevent the /generate-personas endpoint from crashing
 from fastapi import FastAPI, HTTPException, Security, Depends
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from vertexai.generative_models import GenerativeModel
-import os
 
 app = FastAPI(title="Profiler Agent API")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 EXPECTED_API_KEY = os.getenv("API_KEY")
 
-
 class ProfilerRequest(BaseModel):
     customer_id: int
-    model_context: dict  # This catches the cluster ID, segment name, and Kaggle features
+    model_context: dict  
 
 class PersonaGenerationRequest(BaseModel):
     stats: list
@@ -24,13 +24,11 @@ def verify_api_key(api_key: str = Security(api_key_header)):
 @app.post("/api/v1/profile")
 async def generate_profile(request: ProfilerRequest, api_key: str = Depends(verify_api_key)):
     try:
-        # 1. Extract the rich data passed from Agent 1
-        segment_name = request.model_context.get("segment_name", "Unknown Segment")
+        # 1. Extract ONLY the raw data features (Ignore the misleading segment name)
         features = request.model_context.get("customer_features", {})
         
-        # 2. Formulate a highly structured context string for the LLM
+        # 2. Formulate a highly structured context string for the LLM based ONLY on numbers
         context_string = (
-            f"Assigned ML Segment: {segment_name}\n"
             f"Age: {features.get('age', 'Unknown')}\n"
             f"Annual Income: ${features.get('income', 'Unknown')}\n"
             f"Total Lifetime Spend: ${features.get('total_spend', 'Unknown')}\n"
@@ -39,14 +37,20 @@ async def generate_profile(request: ProfilerRequest, api_key: str = Depends(veri
             f"Days Since Last Purchase: {features.get('days_since_last_purchase', 'Unknown')}\n"
         )
 
-        # 3. Run the Profiler Agent
+        # 3. Run the Profiler Agent with Strict Guardrails
         model_name = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
+        
         instruction = (
-            "You are an expert Customer Data Profiler. Analyze the provided machine learning segment "
-            "and raw customer features to output a concise 'Target Persona Brief'. "
-            "Highlight their spending power, historical engagement, and explicitly state what kind "
-            "of incentives (e.g., premium tech, budget food, luxury travel, etc.) would motivate them. "
-            "Do NOT write a marketing strategy. Only write the psychological and financial profile."
+            "You are an expert Customer Data Profiler. Analyze the following raw customer metrics "
+            "fetched directly from our database. Based STRICTLY on these exact numbers, output a "
+            "concise 'Target Persona Brief'. Highlight their actual spending power, historical engagement, "
+            "and explicitly state what kind of incentives (e.g., budget food, essentials, premium tech) "
+            "would motivate a person with this specific age and financial profile.\n\n"
+            "CRITICAL INSTRUCTIONS:\n"
+            "1. Do NOT attempt to name, guess, or label the segment (e.g., do not use terms like 'Promising Potentials' or 'Younger').\n"
+            "2. Base the profile entirely on the chronological age and actual financial numbers provided.\n"
+            "3. Do NOT write a marketing strategy.\n"
+            "4. Only write the psychological and financial profile."
         )
         
         agent = GenerativeModel(model_name, system_instruction=instruction)
@@ -74,8 +78,7 @@ async def generate_personas(request: PersonaGenerationRequest, api_key: str = De
         
         agent = GenerativeModel(model_name)
         
-        # 🚨 THE ARCHITECT'S SECRET: Force Gemini into strict JSON mode 
-        # so it doesn't accidentally output conversational text and crash your pipeline!
+        # Force Gemini into strict JSON mode 
         generation_config = {"response_mime_type": "application/json"}
         
         response = agent.generate_content(prompt, generation_config=generation_config)
