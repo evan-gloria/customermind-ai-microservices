@@ -29,6 +29,7 @@ Rather than a simple chatbot, this platform functions as a "Human-in-the-Loop" r
 
 ## ⚙️ System Architecture & Design Patterns
 
+![System Architecture](00_assets/customermind-ai-gcp-architecture.png)
 **Core Stack:**
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
@@ -111,6 +112,26 @@ gcloud run deploy orchestrator-service \
   --region australia-southeast1 \
   --set-secrets="API_KEY=customermind-api-key:latest"
 ```
+
+-----
+
+### 🚀 Future Roadmap: From POC to Production
+
+If you document these considerations, categorize them into three engineering "Epics":
+
+#### 1. Data Architecture Evolution (The "Data Sleuth" Feedback)
+* **Current State:** The POC relies on static demographic snapshots (Age, Income) for baseline clustering.
+* **Production Consideration:** Shift to a **Behavioral Event-Driven Architecture**. We will expand the BigQuery schema to ingest time-series historical engagement logs (click-through rates, past purchases, session duration). 
+* **Geospatial Integration:** Add native Latitude/Longitude data types to BigQuery to allow the AI to perform geospatial querying (e.g., "Find high-LTV customers within 5km of our Sydney flagship store").
+
+#### 2. Advanced MLOps & Predictive Modeling (The "CMO" Feedback)
+* **Current State:** Unsupervised K-Means clustering for basic persona grouping.
+* **Production Consideration:** Transition to **Predictive ROI Modeling**. Instead of just grouping users, we will train supervised models (e.g., XGBoost or deep learning on Vertex AI) to predict Customer Lifetime Value (LTV) and Conversion Likelihood. 
+* **The Goal:** The Campaign Viability Engine will use these predictions to rank strategies by *Expected Revenue*, directly addressing the CMO's request for ROI prioritization.
+
+#### 3. Seamless UI Orchestration 
+* **Current State:** Distinct, separate tabs for Persona Building and Campaign Viability.
+* **Production Consideration:** Implement a unified state-management flow in the frontend. When a user generates a Persona, the Orchestrator Service will automatically trigger the Campaign Viability model in the background, surfacing predicted ROI scores directly on the Persona card.
 
 -----
 
