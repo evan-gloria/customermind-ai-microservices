@@ -20,7 +20,7 @@ def fetch_live_offers_from_gateway(url, key):
     return []
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="Agentic AI Portfolio", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Enterprise AI Portfolio", page_icon="🧠", layout="wide")
 
 # --- CSS ANIMATION ---
 st.markdown("""
@@ -41,8 +41,6 @@ st.markdown("""
 
 # -----------------------------------------------------------------------------
 # 🔒 Security: Secret Management & Environment Variables
-# This logic first checks Streamlit's native secrets manager (for Streamlit Cloud)
-# and falls back to standard OS environment variables (for Docker / GCP Cloud Run).
 # -----------------------------------------------------------------------------
 
 try:
@@ -55,12 +53,10 @@ except (FileNotFoundError, KeyError):
     CONF_ORCHESTRATOR_URL = os.getenv("URL_ORCHESTRATOR", "http://127.0.0.1:8000")
 
 
-
 # --- HEADER ---
 st.title("🧠 Customer Intelligence Platform")
-st.markdown("**Enterprise AI Marketing Hub** | *Powered by Distributed Agents & BigQuery*")
+st.markdown("**Enterprise AI Marketing Hub** | *Powered by AI Microservices & BigQuery*")
 st.divider()
-
 
 
 # --- SIDEBAR (Configuration & Guide) ---
@@ -83,8 +79,22 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.markdown("### 🤖 Engine Capabilities")
-    st.caption("**The autonomous agents powering this platform:**")
+    
+    # 🌟 NEW: Microservice System Status UI
+    st.markdown("### 🟢 System Status")
+    st.markdown("""
+    <div style="font-size: 0.85em; color: #a3a8b8; margin-bottom: 15px;">
+    ✅ Orchestrator Service (Gateway)<br>
+    ✅ Data Modeler Service (BigQuery)<br>
+    ✅ Profiler Service (Gemini Flash)<br>
+    ✅ Strategic Service (Gemini Flash)<br>
+    ✅ Reviewer Service (Llama 3)
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### ⚙️ Engine Capabilities")
+    st.caption("**The AI Microservices powering this platform:**")
     st.markdown("""
     <div style="font-size: 0.85em; color: #a3a8b8;">
     <b>1. 🟢 Data Engine:</b> Securely extracts and scores enterprise BigQuery profiles.<br><br>
@@ -97,13 +107,11 @@ with st.sidebar:
     # ---------------------------------------------------------
     # 🔒 SECURE MLOPS ADMIN PANEL (Environment Feature Flag)
     # ---------------------------------------------------------
-    # Safely check if the ADMIN_KEY exists in the local environment or secrets.
     try:
         refresh_admin_key = st.secrets.get("REFRESH_ADMIN_KEY")
     except FileNotFoundError:
         refresh_admin_key = os.getenv("REFRESH_ADMIN_KEY")
         
-    # ONLY render the UI if the ADMIN_KEY variable was found
     if refresh_admin_key:
         st.markdown("---")
         st.markdown(
@@ -115,9 +123,9 @@ with st.sidebar:
         )
         
         if st.button("🔄 Retrain AI Segments", type="primary", use_container_width=True):
-            with st.spinner("Initiating Multi-Agent Workflow..."):
+            with st.spinner("Initiating Orchestrated MLOps Pipeline..."):
                 try:
-                    headers = {"X-API-Key": refresh_admin_key} # Uses the global API key
+                    headers = {"X-API-Key": refresh_admin_key} 
                     response = requests.post(f"{orchestrator_url}/tools/refresh-segments", headers=headers)
                     
                     if response.status_code == 200:
@@ -164,7 +172,7 @@ with st.sidebar:
 # --- TABS INITIALIZATION ---
 if not api_key:
     st.error("🚨 Security Error: API_KEY is missing from the environment. Please check your deployment secrets.")
-    st.stop() # Halts the app so the user can't interact with a broken state
+    st.stop()
 else:
     tab1, tab2, tab3 = st.tabs([
         "🎯 Persona Strategy Builder", 
@@ -177,7 +185,7 @@ else:
     # ==========================================
     with tab1:
         st.markdown("### 🎯 Persona Strategy Builder")
-        st.info("**The Goal:** Transform raw customer data into a ready-to-send, highly personalized marketing campaign.\n\n**How it works:** Enter a Customer ID to trigger an autonomous AI workflow. The platform extracts their data, builds a psychological profile, scouts live market deals, and drafts a targeted email with auditing capability for brand safety.")
+        st.info("**The Goal:** Transform raw customer data into a ready-to-send, highly personalized marketing campaign.\n\n**How it works:** Enter a Customer ID to trigger a deterministic microservice pipeline. The Orchestrator extracts their data, builds a psychological profile, scouts live market deals, and drafts a targeted email with auditing capability for brand safety.")
         col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
             customer_id = st.text_input("Enter Customer ID", value="5917880785599854719", max_chars=20)
@@ -188,7 +196,7 @@ else:
 
         if customer_id and not customer_id.isdigit():
             st.error("Invalid Input: Customer ID must contain only numbers.")
-            st.stop() # This prevents the rest of the page from loading or querying the database
+            st.stop()
 
         if execute_btn:
             headers = {"Content-Type": "application/json", "X-API-Key": api_key}
@@ -269,12 +277,11 @@ else:
             st.markdown("### 📊 Campaign Viability Engine")
             st.info("**The Goal:** Validate whether a specific market offer has a large enough audience to be profitable.\n\n**How it works:** Select a live market deal to run a real-time Machine Learning model (`ML.PREDICT`) across the customer database. The engine instantly calculates the exact size, demographics, and expected revenue of the most viable target audience.")
         with btn_col:
-            st.write("") # Spacing alignment
+            st.write("") 
             if st.button("🔄 Refresh Deals", use_container_width=True):
-                fetch_live_offers_from_gateway.clear() # 🌟 This instantly wipes the cache!
-                st.rerun() # Forces the UI to reload and fetch fresh data
+                fetch_live_offers_from_gateway.clear() 
+                st.rerun() 
         
-        # Fetch the data (will use cache unless the button was just clicked)
         live_offers = fetch_live_offers_from_gateway(orchestrator_url, api_key)
         
         if not live_offers:
@@ -292,17 +299,15 @@ else:
             
             if analyze_btn:
                 cohort_data = None
-                strategic_insight = None  # 🌟 NEW: Initialize the LLM insight variable
+                strategic_insight = None 
                 
                 with st.status("🔍 Running Campaign Viability Engine...", expanded=True) as status:
                     ui_placeholder = st.empty()
                     tracked_steps = []
                     
                     try:
-                        # 🌟 NEW: Create the JSON payload for the POST request
                         payload = {"offer_title": selected_offer_title, "category": selected_category}
                         
-                        # 🌟 NEW: Change to requests.post and use the new /analyze-offer endpoint
                         with requests.post(
                             f"{orchestrator_url}/api/v1/analyze-offer", 
                             json=payload,
@@ -332,7 +337,6 @@ else:
                                         
                                     elif stream_data.get("status") == "complete":
                                         cohort_data = stream_data.get("data", {}).get("top_cohorts", [])
-                                        # 🌟 NEW: Extract the strategic insight from the backend payload
                                         strategic_insight = stream_data.get("data", {}).get("strategic_insight", "No insight generated.")
                                         
                                         display_text = ""
@@ -343,7 +347,6 @@ else:
                                         ui_placeholder.markdown(display_text, unsafe_allow_html=True)
                                         status.update(label="✅ Viability Scan Complete", state="complete", expanded=False)
                                     
-                                    # 🌟 RESTORED: Catching backend errors so it doesn't fail silently
                                     elif stream_data.get("status") == "error":
                                         st.error(f"Backend Error: {stream_data.get('message')}")
                                         status.update(label="❌ Pipeline Failed", state="error", expanded=True)
@@ -379,7 +382,6 @@ else:
                         st.write("**Average Age by Segment**")
                         st.bar_chart(df["avg_age"], color="#FFC107")
                     
-                    # 🌟 NEW: Display the LLM Strategist Insight below the charts
                     if strategic_insight:
                         st.divider()
                         st.markdown("### 🧠 AI Strategist Insight")
@@ -395,26 +397,21 @@ else:
     # ==========================================
     with tab3:
         st.markdown("### 💬 AI Marketing Copilot")
-        st.info("**The Goal:** Bypass SQL and Jira tickets. Get instant answers to complex strategic questions.\n\n**How it works:** Use natural language to ask questions. The autonomous agent will securely write SQL, query the BigQuery data warehouse, and fetch live web data to give you instant, strategic answers.")
+        st.info("**The Goal:** Bypass SQL and Jira tickets. Get instant answers to complex strategic questions.\n\n**How it works:** Use natural language to ask questions. The AI Copilot will securely write SQL, query the BigQuery data warehouse, and fetch live web data to give you instant, strategic answers.")
         st.write("Ask the AI to query the customer database or check live market offers for you.")
     
-        # 1. Initialize the chat memory in the browser
         if "messages" not in st.session_state:
             st.session_state.messages = []
             
-        # 2. Create the container BEFORE drawing anything
         chat_container = st.container()
                 
-        # 3. Draw historical messages ONLY ONCE, strictly inside the container
         with chat_container:
             for msg in st.session_state.messages:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
 
-        # 4. Logic to handle prompt starters
         prompt = None 
         
-        # 🌟 The indentation here ensures the text AND buttons hide together!
         if len(st.session_state.messages) == 0:
             st.write("") 
             st.caption("💡 **Suggested Queries:**")
@@ -427,24 +424,21 @@ else:
             if col3.button("🧠 Multi-Tool Strategy", use_container_width=True):
                 prompt = "Find a live Tech deal on OzBargain, and tell me how many customers we have making over $100,000 to target it to."
 
-        # 5. The Chat Input Box (Pinned to the bottom)
         user_input = st.chat_input("E.g., What is the average income of the Tech segment?")
         if user_input:
             prompt = user_input
                 
-        # 6. Trigger the Agent if a prompt was fired
+        # Trigger the Copilot if a prompt was fired
         if prompt:
-            # Display user message instantly inside the container
             st.session_state.messages.append({"role": "user", "content": prompt})
             with chat_container:
                 with st.chat_message("user"):
                     st.markdown(prompt)
                     
-                # Trigger the Agent and show spinner inside the container
+                # Trigger the Copilot and show spinner inside the container
                 with st.chat_message("assistant"):
-                    with st.spinner("🤖 Agent is reasoning, querying tools, and writing SQL..."):
+                    with st.spinner("🤖 AI Copilot is reasoning, querying tools, and writing SQL..."):
                         try:
-                            # Safely extract the last 4 messages for memory
                             recent_history = st.session_state.messages[:-1][-4:]
                             
                             payload = {
@@ -462,10 +456,8 @@ else:
                                 reply = res.json().get("response", "No response generated.")
                                 st.markdown(reply)
                                 
-                                # Save assistant reply to memory
                                 st.session_state.messages.append({"role": "assistant", "content": reply})
                                 
-                                # Force redraw to clean up state
                                 st.rerun()
                                 
                             else:
