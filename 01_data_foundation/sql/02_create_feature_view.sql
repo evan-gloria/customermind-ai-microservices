@@ -8,5 +8,5 @@ SELECT
   (NumWebPurchases + NumCatalogPurchases + NumStorePurchases) AS Total_Purchases,
   NumWebVisitsMonth,
   AcceptedCmp1 + AcceptedCmp2 + AcceptedCmp3 + AcceptedCmp4 + AcceptedCmp5 AS Total_Campaigns_Accepted
-FROM `customermind_ai.raw_customer_profiles`
+FROM `customermind_ai.raw_customer_profiles_clean`
 WHERE Income IS NOT NULL;

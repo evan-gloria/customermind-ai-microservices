@@ -1,6 +1,6 @@
 -- Create a back up of the Original loaded records
-CREATE TABLE customermind-ai-efg1049.customermind_ai.raw_customer_profiles_og AS 
-SELECT * FROM customermind-ai-efg1049.customermind_ai.raw_customer_profiles;
+CREATE TABLE customermind_ai.raw_customer_profiles_og AS 
+SELECT * FROM customermind_ai.raw_customer_profiles;
 
 
 -- Use to generate dummy records
