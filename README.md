@@ -85,7 +85,7 @@ While open-ended Agentic frameworks (like Anthropic's Model Context Protocol) ar
 This project uses **Poetry** for dependency management.
 
 ```bash
-git clone [https://github.com/evan-gloria/customermind-ai-microservices.git](https://github.com/evan-gloria/customermind-ai-microservices.git)
+git clone https://github.com/evan-gloria/customermind-ai-microservices.git
 cd customermind-ai-microservices
 
 # Install dependencies
